@@ -1,0 +1,58 @@
+@CalendarTasking.Api_HostAddress = http://localhost:5170
+
+### Register user
+POST {{CalendarTasking.Api_HostAddress}}/api/users/register
+Content-Type: application/json
+
+{
+  "email": "ana@example.com",
+  "password": "Pass123!",
+  "firstName": "Ana",
+  "lastName": "Ilic",
+  "timeZoneId": "Central European Standard Time"
+}
+
+### Create calendar
+POST {{CalendarTasking.Api_HostAddress}}/api/calendars
+Content-Type: application/json
+
+{
+  "ownerUserId": 1,
+  "name": "Private Classes",
+  "description": "Students and payments",
+  "colorHex": "#1D4ED8",
+  "isDefault": false
+}
+
+### Create private class session
+POST {{CalendarTasking.Api_HostAddress}}/api/private-class-sessions
+Content-Type: application/json
+
+{
+  "calendarId": 1,
+  "createdByUserId": 1,
+  "studentName": "Marko Markovic",
+  "studentContact": "marko@mail.com",
+  "sessionStartUtc": "2026-02-12T17:00:00Z",
+  "sessionEndUtc": "2026-02-12T18:00:00Z",
+  "topicPlanned": "SQL joins",
+  "topicDone": "Inner and left joins",
+  "homeworkAssigned": "Solve 5 join queries",
+  "priceAmount": 20,
+  "currencyCode": "RSD",
+  "isPaid": false,
+  "status": "Completed"
+}
+
+### Mark session paid
+PUT {{CalendarTasking.Api_HostAddress}}/api/private-class-sessions/1/mark-paid
+Content-Type: application/json
+
+{
+  "paymentMethod": "Cash",
+  "paymentNote": "Paid after class"
+}
+
+### Get monthly summary
+GET {{CalendarTasking.Api_HostAddress}}/api/private-class-sessions/monthly-summary?calendarId=1&year=2026&month=2
+Accept: application/json

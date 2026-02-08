@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Calendar Tasking API Lab</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@500;700;800&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./api-lab.css">
+</head>
+<body>
+  <div id="app" v-cloak>
+    <div class="grain"></div>
+    <header class="hero">
+      <div class="hero__title">
+        <p class="eyebrow">QA-Ready Vue Client</p>
+        <h1>Calendar Tasking Command Deck</h1>
+        <p class="subtitle">
+          Responsive frontend for manually testing all CRUD and helper API operations required in the project brief.
+        </p>
+      </div>
+      <div class="hero__controls" data-testid="environment-panel">
+        <label class="field">
+          <span>API Base URL</span>
+          <input
+            data-testid="base-url-input"
+            v-model.trim="baseUrl"
+            type="url"
+            placeholder="http://localhost:5170"
+            autocomplete="off">
+        </label>
+        <div class="hero__buttons">
+          <button type="button" class="btn ghost" @click="useCurrentOrigin">Use Current Origin</button>
+          <button type="button" class="btn ghost" @click="resetBaseUrl">Reset URL</button>
+        </div>
+        <p class="hint">Tip: keep backend running on <code>http://localhost:5170</code> or <code>https://localhost:7140</code>.</p>
+      </div>
+    </header>
+
+    <main class="workspace">
+      <aside class="panel panel--groups">
+        <h2>Domains</h2>
+        <p class="panel-copy">Switch endpoint groups and filter operations.</p>
+        <div class="group-list" role="tablist">
+          <button
+            v-for="group in endpointGroups"
+            :key="group.key"
+            :class="['group-btn', { 'group-btn--active': activeGroupKey === group.key }]"
+            role="tab"
+            :aria-selected="activeGroupKey === group.key"
+            :data-testid="`group-${group.key}`"
+            @click="activeGroupKey = group.key">
+            <span>{{ group.title }}</span>
+            <small>{{ group.endpoints.length }} ops</small>
+          </button>
+        </div>
+      </aside>
+
+      <section class="panel panel--operations">
+        <div class="operations-head">
+          <div>
+            <h2>{{ activeGroup?.title }}</h2>
+            <p class="panel-copy">{{ activeGroup?.description }}</p>
+          </div>
+          <label class="field field--search">
+            <span>Search</span>
+            <input
+              data-testid="operation-search"
+              v-model.trim="searchText"
+              type="search"
+              placeholder="Filter by endpoint or method">
+          </label>
+        </div>
+
+        <div class="operation-grid">
+          <article
+            v-for="endpoint in filteredEndpoints"
+            :key="endpoint.id"
+            :data-testid="`endpoint-${endpoint.id}`"
+            class="operation-card">
+            <header class="operation-card__head">
+              <span :class="['method-pill', `method-pill--${endpoint.method.toLowerCase()}`]">{{ endpoint.method }}</span>
+              <h3>{{ endpoint.title }}</h3>
+              <code>{{ endpoint.pathTemplate }}</code>
+              <p>{{ endpoint.description }}</p>
+            </header>
+
+            <div class="operation-form">
+              <div v-if="endpoint.pathParams.length" class="fieldset">
+                <h4>Path Parameters</h4>
+                <div class="fields">
+                  <label
+                    v-for="fieldDef in endpoint.pathParams"
+                    :key="`${endpoint.id}-path-${fieldDef.key}`"
+                    class="field">
+                    <span>{{ fieldDef.label }}</span>
+                    <template v-if="fieldDef.type === 'select'">
+                      <select v-model="formState[endpoint.id].path[fieldDef.key]">
+                        <option
+                          v-for="choice in fieldDef.options"
+                          :key="choice.value"
+                          :value="choice.value">{{ choice.label }}</option>
+                      </select>
+                    </template>
+                    <template v-else>
+                      <input
+                        v-model="formState[endpoint.id].path[fieldDef.key]"
+                        :type="resolveInputType(fieldDef.type)"
+                        :step="fieldDef.type === 'decimal' ? '0.01' : (fieldDef.type === 'number' ? '1' : undefined)"
+                        :placeholder="fieldDef.placeholder || ''"
+                        :required="fieldDef.required === true">
+                    </template>
+                  </label>
+                </div>
+              </div>
+
+              <div v-if="endpoint.queryParams.length" class="fieldset">
+                <h4>Query Parameters</h4>
+                <div class="fields">
+                  <label
+                    v-for="fieldDef in endpoint.queryParams"
+                    :key="`${endpoint.id}-query-${fieldDef.key}`"
+                    class="field">
+                    <span>{{ fieldDef.label }}</span>
+                    <template v-if="fieldDef.type === 'select'">
+                      <select v-model="formState[endpoint.id].query[fieldDef.key]">
+                        <option
+                          v-for="choice in fieldDef.options"
+                          :key="choice.value"
+                          :value="choice.value">{{ choice.label }}</option>
+                      </select>
+                    </template>
+                    <template v-else>
+                      <input
+                        v-model="formState[endpoint.id].query[fieldDef.key]"
+                        :type="resolveInputType(fieldDef.type)"
+                        :step="fieldDef.type === 'decimal' ? '0.01' : (fieldDef.type === 'number' ? '1' : undefined)"
+                        :placeholder="fieldDef.placeholder || ''"
+                        :required="fieldDef.required === true">
+                    </template>
+                  </label>
+                </div>
+              </div>
+
+              <div v-if="endpoint.bodyParams.length" class="fieldset">
+                <h4>Request Body</h4>
+                <div class="fields">
+                  <label
+                    v-for="fieldDef in endpoint.bodyParams"
+                    :key="`${endpoint.id}-body-${fieldDef.key}`"
+                    class="field">
+                    <span>{{ fieldDef.label }}</span>
+                    <template v-if="fieldDef.type === 'select'">
+                      <select v-model="formState[endpoint.id].body[fieldDef.key]">
+                        <option
+                          v-for="choice in fieldDef.options"
+                          :key="choice.value"
+                          :value="choice.value">{{ choice.label }}</option>
+                      </select>
+                    </template>
+                    <template v-else-if="fieldDef.type === 'textarea'">
+                      <textarea
+                        v-model="formState[endpoint.id].body[fieldDef.key]"
+                        rows="3"
+                        :placeholder="fieldDef.placeholder || ''"></textarea>
+                    </template>
+                    <template v-else>
+                      <input
+                        v-model="formState[endpoint.id].body[fieldDef.key]"
+                        :type="resolveInputType(fieldDef.type)"
+                        :step="fieldDef.type === 'decimal' ? '0.01' : (fieldDef.type === 'number' ? '1' : undefined)"
+                        :placeholder="fieldDef.placeholder || ''"
+                        :required="fieldDef.required === true">
+                    </template>
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <footer class="operation-card__actions">
+              <button
+                type="button"
+                class="btn primary"
+                :data-testid="`run-${endpoint.id}`"
+                :disabled="loadingEndpointId === endpoint.id"
+                @click="runEndpoint(endpoint)">
+                {{ loadingEndpointId === endpoint.id ? 'Running...' : `Run ${endpoint.method}` }}
+              </button>
+              <button
+                type="button"
+                class="btn ghost"
+                @click="resetEndpoint(endpoint.id)">
+                Reset
+              </button>
+            </footer>
+          </article>
+        </div>
+      </section>
+
+      <aside class="panel panel--response" data-testid="response-panel">
+        <h2>Live Response</h2>
+        <p class="panel-copy">Status, timing, and payload output for Playwright-friendly assertions.</p>
+        <div class="response-meta">
+          <p><strong>Operation:</strong> {{ response.operation || '-' }}</p>
+          <p><strong>Request:</strong> <code>{{ response.method }} {{ response.url }}</code></p>
+          <p><strong>Status:</strong> <span :class="statusClass">{{ response.statusText }}</span></p>
+          <p><strong>Duration:</strong> {{ response.durationMs }} ms</p>
+        </div>
+        <pre data-testid="response-output">{{ response.prettyBody }}</pre>
+      </aside>
+    </main>
+  </div>
+
+  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+  <script src="./api-lab.js"></script>
+</body>
+</html>

@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Calendar Tasking</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;500;600;700;800&family=Newsreader:opsz,wght@6..72,500;6..72,700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <div id="app" v-cloak>
+    <div class="ambient ambient--a"></div>
+    <div class="ambient ambient--b"></div>
+
+    <header v-if="isAuthenticated" class="topbar">
+      <div class="brand">
+        <p class="eyebrow">Calendar Tasking</p>
+        <h1>Personal Workspace</h1>
+      </div>
+      <div class="topbar__actions">
+        <label class="field compact">
+          <span>Active calendar</span>
+          <select v-model.number="selectedCalendarId">
+            <option v-for="calendar in calendars" :key="calendar.calendarId" :value="calendar.calendarId">
+              {{ calendar.name }}
+            </option>
+          </select>
+        </label>
+        <button type="button" class="btn ghost" @click="activePage = 'calendars'">Manage Calendars</button>
+        <button type="button" class="btn ghost" @click="logout">Log out</button>
+      </div>
+    </header>
+
+    <main :class="['app-shell', { 'app-shell--auth': !isAuthenticated }]">
+      <section v-if="!isAuthenticated" class="auth-shell">
+        <article class="auth-intro">
+          <p class="eyebrow">Real User Client</p>
+          <h2>Organize your calendar, tasks, events, and lessons</h2>
+          <p>
+            Register an account, create your own calendars, then manage daily tasks and schedules in one place.
+          </p>
+          <div class="seed-note">
+            <p><strong>Seed login:</strong> ana@example.com / Pass123!</p>
+          </div>
+        </article>
+
+        <article class="auth-card">
+          <div class="switch">
+            <button type="button" :class="['switch-btn', { active: authMode === 'login' }]" @click="authMode = 'login'">Login</button>
+            <button type="button" :class="['switch-btn', { active: authMode === 'register' }]" @click="authMode = 'register'">Register</button>
+          </div>
+
+          <form v-if="authMode === 'login'" class="stack" @submit.prevent="submitLogin">
+            <label class="field">
+              <span>Email</span>
+              <input v-model.trim="loginForm.email" type="email" required autocomplete="username">
+            </label>
+            <label class="field">
+              <span>Password</span>
+              <input v-model="loginForm.password" type="password" required autocomplete="current-password">
+            </label>
+            <button type="submit" class="btn primary" :disabled="busy.auth">{{ busy.auth ? "Signing in..." : "Sign in" }}</button>
+          </form>
+
+          <form v-else class="stack" @submit.prevent="submitRegister">
+            <label class="field">
+              <span>Email</span>
+              <input v-model.trim="registerForm.email" type="email" required autocomplete="email">
+            </label>
+            <label class="field">
+              <span>Password</span>
+              <input v-model="registerForm.password" type="password" minlength="6" required autocomplete="new-password">
+            </label>
+            <div class="split">
+              <label class="field">
+                <span>First name</span>
+                <input v-model.trim="registerForm.firstName" type="text" maxlength="80" required autocomplete="given-name">
+              </label>
+              <label class="field">
+                <span>Last name</span>
+                <input v-model.trim="registerForm.lastName" type="text" maxlength="80" required autocomplete="family-name">
+              </label>
+            </div>
+            <label class="field">
+              <span>Time zone</span>
+              <input v-model.trim="registerForm.timeZoneId" type="text" placeholder="UTC">
+            </label>
+            <button type="submit" class="btn primary" :disabled="busy.auth">{{ busy.auth ? "Creating..." : "Create account" }}</button>
+          </form>
+        </article>
+      </section>
+
+      <template v-else>
+        <aside class="sidebar">
+          <article class="user-card">
+            <p class="eyebrow">Signed in</p>
+            <h3>{{ userDisplayName }}</h3>
+            <p>{{ user?.email }}</p>
+          </article>
+
+          <nav class="menu">
+            <button
+              v-for="page in pages"
+              :key="page.key"
+              type="button"
+              :class="['menu-btn', { active: activePage === page.key }]"
+              @click="activePage = page.key">
+              {{ page.label }}
+            </button>
+          </nav>
+
+          <article class="sidebar-note">
+            <p class="eyebrow">Testing</p>
+            <p>Need raw endpoint testing?</p>
+            <a href="./api-lab.html">Open API Lab</a>
+          </article>
+        </aside>
+
+        <section class="content">
+          <section v-show="activePage === 'overview'" class="page">
+            <div class="page-head">
+              <div>
+                <p class="eyebrow">Overview</p>
+                <h2>Today at a glance</h2>
+                <p class="muted">Current calendar: <strong>{{ activeCalendarName || "None selected" }}</strong></p>
+              </div>
+              <button type="button" class="btn ghost" @click="refreshAll">Refresh all</button>
+            </div>
+
+            <div class="stats-grid">
+              <article class="stat-card">
+                <p>Calendars</p>
+                <h3>{{ calendars.length }}</h3>
+              </article>
+              <article class="stat-card">
+                <p>Tasks</p>
+                <h3>{{ tasks.length }}</h3>
+              </article>
+              <article class="stat-card">
+                <p>Upcoming events</p>
+                <h3>{{ upcomingEvents.length }}</h3>
+              </article>
+              <article class="stat-card">
+                <p>Unpaid sessions</p>
+                <h3>{{ unpaidSessionsCount }}</h3>
+              </article>
+            </div>
+
+            <div class="two-col">
+              <article class="panel">
+                <div class="panel-head">
+                  <h3>Tasks due soon</h3>
+                </div>
+                <ul v-if="dueSoonTasks.length" class="list">
+                  <li v-for="task in dueSoonTasks" :key="`overview-task-${task.taskItemId}`">
+                    <strong>{{ task.title }}</strong>
+                    <span>{{ formatDate(task.dueUtc) || "No due date" }}</span>
+                  </li>
+                </ul>
+                <p v-else class="muted">No upcoming tasks in this calendar.</p>
+              </article>
+
+              <article class="panel">
+                <div class="panel-head">
+                  <h3>Upcoming events</h3>
+                </div>
+                <ul v-if="upcomingEvents.length" class="list">
+                  <li v-for="event in upcomingEvents" :key="`overview-event-${event.eventId}`">
+                    <strong>{{ event.title }}</strong>
+                    <span>{{ formatDate(event.startUtc) }}</span>
+                  </li>
+                </ul>
+                <p v-else class="muted">No upcoming events in this calendar.</p>
+              </article>
+            </div>
+          </section>
+
+          <section v-show="activePage === 'calendars'" class="page page-grid">
+            <article class="panel">
+              <div class="panel-head">
+                <h3>{{ calendarForm.calendarId ? "Edit calendar" : "New calendar" }}</h3>
+              </div>
+              <form class="stack" @submit.prevent="submitCalendar">
+                <label class="field">
+                  <span>Name</span>
+                  <input v-model.trim="calendarForm.name" type="text" maxlength="120" required>
+                </label>
+                <label class="field">
+                  <span>Description</span>
+                  <textarea v-model.trim="calendarForm.description" rows="3" maxlength="500"></textarea>
+                </label>
+                <label class="field">
+                  <span>Color</span>
+                  <input v-model="calendarForm.colorHex" type="color">
+                </label>
+                <label class="check">
+                  <input v-model="calendarForm.isDefault" type="checkbox">
+                  <span>Set as default calendar</span>
+                </label>
+                <div class="row-actions">
+                  <button type="submit" class="btn primary" :disabled="busy.calendars">
+                    {{ busy.calendars ? "Saving..." : "Save calendar" }}
+                  </button>
+                  <button type="button" class="btn ghost" @click="resetCalendarForm">Clear</button>
+                </div>
+              </form>
+            </article>
+
+            <article class="panel">
+              <div class="panel-head">
+                <h3>Your calendars</h3>
+                <button type="button" class="btn ghost" @click="createStarterCalendar" :disabled="busy.calendars">Add starter</button>
+              </div>
+              <div v-if="calendars.length" class="card-list">
+                <article v-for="calendar in calendars" :key="calendar.calendarId" class="item-card">
+                  <div class="item-top">
+                    <div class="dot" :style="{ backgroundColor: calendar.colorHex }"></div>
+                    <div>
+                      <h4>{{ calendar.name }}</h4>
+                      <p>{{ calendar.description || "No description" }}</p>
+                    </div>
+                  </div>
+                  <div class="chip-row">
+                    <span v-if="calendar.isDefault" class="chip">Default</span>
+                    <span class="chip">{{ calendar.colorHex }}</span>
+                  </div>
+                  <div class="row-actions">
+                    <button type="button" class="btn ghost" @click="selectedCalendarId = calendar.calendarId">Use</button>
+                    <button type="button" class="btn ghost" @click="editCalendar(calendar)">Edit</button>
+                    <button type="button" class="btn danger" @click="deleteCalendar(calendar)">Delete</button>
+                  </div>
+                </article>
+              </div>
+              <p v-else class="muted">No calendars yet. Create your first one.</p>
+            </article>
+          </section>
+
+          <section v-show="activePage === 'tasks'" class="page page-grid">
+            <article class="panel">
+              <div class="panel-head">
+                <h3>{{ taskForm.taskItemId ? "Edit task" : "New task" }}</h3>
+              </div>
+              <form class="stack" @submit.prevent="submitTask">
+                <label class="field">
+                  <span>Calendar</span>
+                  <select v-model.number="taskForm.calendarId" required>
+                    <option v-for="calendar in calendars" :key="`task-calendar-${calendar.calendarId}`" :value="calendar.calendarId">
+                      {{ calendar.name }}
+                    </option>
+                  </select>
+                </label>
+                <label class="field">
+                  <span>Title</span>
+                  <input v-model.trim="taskForm.title" type="text" maxlength="200" required>
+                </label>
+                <label class="field">
+                  <span>Description</span>
+                  <textarea v-model.trim="taskForm.description" rows="3" maxlength="1000"></textarea>
+                </label>
+                <div class="split">
+                  <label class="field">
+                    <span>Due</span>
+                    <input v-model="taskForm.dueLocal" type="datetime-local">
+                  </label>
+                  <label class="field">
+                    <span>Reminder (minutes)</span>
+                    <input v-model="taskForm.reminderMinutesBefore" type="number" min="0">
+                  </label>
+                </div>
+                <div class="split">
+                  <label class="field">
+                    <span>Priority</span>
+                    <select v-model="taskForm.priority">
+                      <option>Low</option>
+                      <option>Medium</option>
+                      <option>High</option>
+                    </select>
+                  </label>
+                  <label class="field">
+                    <span>Status</span>
+                    <select v-model="taskForm.status">
+                      <option>Todo</option>
+                      <option>InProgress</option>
+                      <option>Done</option>
+                    </select>
+                  </label>
+                </div>
+                <div class="row-actions">
+                  <button type="submit" class="btn primary" :disabled="busy.tasks">{{ busy.tasks ? "Saving..." : "Save task" }}</button>
+                  <button type="button" class="btn ghost" @click="resetTaskForm">Clear</button>
+                </div>
+              </form>
+            </article>
+
+            <article class="panel">
+              <div class="panel-head">
+                <h3>Task list</h3>
+                <label class="field compact">
+                  <span>Status filter</span>
+                  <select v-model="taskFilter.status">
+                    <option value="">All</option>
+                    <option value="Todo">Todo</option>
+                    <option value="InProgress">InProgress</option>
+                    <option value="Done">Done</option>
+                  </select>
+                </label>
+              </div>
+              <div v-if="filteredTasks.length" class="card-list">
+                <article v-for="task in filteredTasks" :key="task.taskItemId" class="item-card">
+                  <div class="item-top">
+                    <div>
+                      <h4>{{ task.title }}</h4>
+                      <p>{{ task.description || "No description" }}</p>
+                    </div>
+                    <div class="chip-row">
+                      <span class="chip">{{ task.priority }}</span>
+                      <span class="chip">{{ task.status }}</span>
+                    </div>
+                  </div>
+                  <p class="muted">Due: {{ formatDate(task.dueUtc) || "Not set" }}</p>
+                  <div class="row-actions">
+                    <button type="button" class="btn ghost" @click="quickTaskStatus(task, 'Todo')">Todo</button>
+                    <button type="button" class="btn ghost" @click="quickTaskStatus(task, 'InProgress')">In Progress</button>
+                    <button type="button" class="btn ghost" @click="quickTaskStatus(task, 'Done')">Done</button>
+                    <button type="button" class="btn ghost" @click="editTask(task)">Edit</button>
+                    <button type="button" class="btn danger" @click="deleteTask(task)">Delete</button>
+                  </div>
+                </article>
+              </div>
+              <p v-else class="muted">No tasks in current filter.</p>
+            </article>
+          </section>
+
+          <section v-show="activePage === 'events'" class="page page-grid">
+            <article class="panel">
+              <div class="panel-head">
+                <h3>{{ eventForm.eventId ? "Edit event" : "New event" }}</h3>
+              </div>
+              <form class="stack" @submit.prevent="submitEvent">
+                <label class="field">
+                  <span>Calendar</span>
+                  <select v-model.number="eventForm.calendarId" required>
+                    <option v-for="calendar in calendars" :key="`event-calendar-${calendar.calendarId}`" :value="calendar.calendarId">
+                      {{ calendar.name }}
+                    </option>
+                  </select>
+                </label>
+                <label class="field">
+                  <span>Title</span>
+                  <input v-model.trim="eventForm.title" type="text" maxlength="200" required>
+                </label>
+                <label class="field">
+                  <span>Description</span>
+                  <textarea v-model.trim="eventForm.description" rows="3" maxlength="1000"></textarea>
+                </label>
+                <label class="field">
+                  <span>Location</span>
+                  <input v-model.trim="eventForm.location" type="text" maxlength="200">
+                </label>
+                <div class="split">
+                  <label class="field">
+                    <span>Start</span>
+                    <input v-model="eventForm.startLocal" type="datetime-local" required>
+                  </label>
+                  <label class="field">
+                    <span>End</span>
+                    <input v-model="eventForm.endLocal" type="datetime-local" required>
+                  </label>
+                </div>
+                <div class="split">
+                  <label class="field">
+                    <span>Repeat</span>
+                    <select v-model="eventForm.repeatType">
+                      <option>None</option>
+                      <option>Daily</option>
+                      <option>Weekly</option>
+                      <option>Monthly</option>
+                    </select>
+                  </label>
+                  <label class="field">
+                    <span>Status</span>
+                    <select v-model="eventForm.status">
+                      <option>Planned</option>
+                      <option>Cancelled</option>
+                    </select>
+                  </label>
+                </div>
+                <div class="split">
+                  <label class="field">
+                    <span>Reminder (minutes)</span>
+                    <input v-model="eventForm.reminderMinutesBefore" type="number" min="0">
+                  </label>
+                  <label class="check field--check">
+                    <input v-model="eventForm.isAllDay" type="checkbox">
+                    <span>All day</span>
+                  </label>
+                </div>
+                <div class="row-actions">
+                  <button type="submit" class="btn primary" :disabled="busy.events">{{ busy.events ? "Saving..." : "Save event" }}</button>
+                  <button type="button" class="btn ghost" @click="resetEventForm">Clear</button>
+                </div>
+              </form>
+            </article>
+
+            <article class="panel">
+              <div class="panel-head">
+                <h3>Events</h3>
+                <button type="button" class="btn ghost" @click="refreshEvents">Refresh</button>
+              </div>
+              <div v-if="events.length" class="card-list">
+                <article v-for="event in events" :key="event.eventId" class="item-card">
+                  <div class="item-top">
+                    <div>
+                      <h4>{{ event.title }}</h4>
+                      <p>{{ event.location || "No location" }}</p>
+                    </div>
+                    <div class="chip-row">
+                      <span class="chip">{{ event.repeatType }}</span>
+                      <span class="chip">{{ event.status }}</span>
+                    </div>
+                  </div>
+                  <p class="muted">{{ formatDate(event.startUtc) }} - {{ formatDate(event.endUtc) }}</p>
+                  <div class="row-actions">
+                    <button type="button" class="btn ghost" @click="editEvent(event)">Edit</button>
+                    <button type="button" class="btn danger" @click="deleteEvent(event)">Delete</button>
+                  </div>
+                </article>
+              </div>
+              <p v-else class="muted">No events yet for the current calendar.</p>
+            </article>
+          </section>
+
+          <section v-show="activePage === 'sessions'" class="page page-grid">
+            <article class="panel">
+              <div class="panel-head">
+                <h3>{{ sessionForm.privateClassSessionId ? "Edit session" : "New private class session" }}</h3>
+              </div>
+              <form class="stack" @submit.prevent="submitSession">
+                <label class="field">
+                  <span>Calendar</span>
+                  <select v-model.number="sessionForm.calendarId" required>
+                    <option v-for="calendar in calendars" :key="`session-calendar-${calendar.calendarId}`" :value="calendar.calendarId">
+                      {{ calendar.name }}
+                    </option>
+                  </select>
+                </label>
+                <label class="field">
+                  <span>Student name</span>
+                  <input v-model.trim="sessionForm.studentName" type="text" maxlength="120" required>
+                </label>
+                <label class="field">
+                  <span>Student contact</span>
+                  <input v-model.trim="sessionForm.studentContact" type="text" maxlength="120">
+                </label>
+                <div class="split">
+                  <label class="field">
+                    <span>Session start</span>
+                    <input v-model="sessionForm.sessionStartLocal" type="datetime-local" required>
+                  </label>
+                  <label class="field">
+                    <span>Session end</span>
+                    <input v-model="sessionForm.sessionEndLocal" type="datetime-local" required>
+                  </label>
+                </div>
+                <label class="field">
+                  <span>Topic planned</span>
+                  <textarea v-model.trim="sessionForm.topicPlanned" rows="2" maxlength="500"></textarea>
+                </label>
+                <label class="field">
+                  <span>Topic done</span>
+                  <textarea v-model.trim="sessionForm.topicDone" rows="2" maxlength="1500"></textarea>
+                </label>
+                <label class="field">
+                  <span>Homework assigned</span>
+                  <textarea v-model.trim="sessionForm.homeworkAssigned" rows="2" maxlength="1500"></textarea>
+                </label>
+                <div class="split">
+                  <label class="field">
+                    <span>Price</span>
+                    <input v-model="sessionForm.priceAmount" type="number" min="0" step="0.01" required>
+                  </label>
+                  <label class="field">
+                    <span>Currency</span>
+                    <input v-model.trim="sessionForm.currencyCode" type="text" maxlength="3" required>
+                  </label>
+                </div>
+                <div class="split">
+                  <label class="field">
+                    <span>Status</span>
+                    <select v-model="sessionForm.status">
+                      <option>Scheduled</option>
+                      <option>Completed</option>
+                      <option>Cancelled</option>
+                      <option>NoShow</option>
+                    </select>
+                  </label>
+                  <label class="field">
+                    <span>Payment method</span>
+                    <select v-model="sessionForm.paymentMethod">
+                      <option value="">(Not set)</option>
+                      <option>Cash</option>
+                      <option>Card</option>
+                      <option>Transfer</option>
+                    </select>
+                  </label>
+                </div>
+                <label class="check">
+                  <input v-model="sessionForm.isPaid" type="checkbox">
+                  <span>Paid</span>
+                </label>
+                <label class="field">
+                  <span>Payment note</span>
+                  <textarea v-model.trim="sessionForm.paymentNote" rows="2" maxlength="500"></textarea>
+                </label>
+                <div class="row-actions">
+                  <button type="submit" class="btn primary" :disabled="busy.sessions">{{ busy.sessions ? "Saving..." : "Save session" }}</button>
+                  <button type="button" class="btn ghost" @click="resetSessionForm">Clear</button>
+                </div>
+              </form>
+            </article>
+
+            <article class="panel">
+              <div class="panel-head">
+                <h3>Sessions & monthly summary</h3>
+                <label class="field compact">
+                  <span>Month</span>
+                  <input v-model="summaryMonth" type="month">
+                </label>
+                <button type="button" class="btn ghost" @click="fetchMonthlySummary">Load summary</button>
+              </div>
+              <div class="stats-grid summary-grid">
+                <article class="stat-card">
+                  <p>Total sessions</p>
+                  <h3>{{ monthlySummary?.totalSessions ?? 0 }}</h3>
+                </article>
+                <article class="stat-card">
+                  <p>Paid sessions</p>
+                  <h3>{{ monthlySummary?.paidSessions ?? 0 }}</h3>
+                </article>
+                <article class="stat-card">
+                  <p>Paid amount</p>
+                  <h3>{{ monthlySummary ? formatMoney(monthlySummary.totalPaidAmount) : "0.00" }}</h3>
+                </article>
+                <article class="stat-card">
+                  <p>Scheduled amount</p>
+                  <h3>{{ monthlySummary ? formatMoney(monthlySummary.totalScheduledAmount) : "0.00" }}</h3>
+                </article>
+              </div>
+
+              <div v-if="sessions.length" class="card-list">
+                <article v-for="session in sessions" :key="session.privateClassSessionId" class="item-card">
+                  <div class="item-top">
+                    <div>
+                      <h4>{{ session.studentName }}</h4>
+                      <p>{{ session.topicPlanned || "No topic planned" }}</p>
+                    </div>
+                    <div class="chip-row">
+                      <span class="chip">{{ session.status }}</span>
+                      <span class="chip">{{ session.isPaid ? "Paid" : "Unpaid" }}</span>
+                    </div>
+                  </div>
+                  <p class="muted">{{ formatDate(session.sessionStartUtc) }} - {{ formatDate(session.sessionEndUtc) }}</p>
+                  <p class="muted">{{ formatMoney(session.priceAmount) }} {{ session.currencyCode }}</p>
+                  <div class="row-actions">
+                    <button v-if="!session.isPaid" type="button" class="btn ghost" @click="markSessionPaid(session)">Mark paid</button>
+                    <button v-else type="button" class="btn ghost" @click="markSessionUnpaid(session)">Mark unpaid</button>
+                    <button type="button" class="btn ghost" @click="editSession(session)">Edit</button>
+                    <button type="button" class="btn danger" @click="deleteSession(session)">Delete</button>
+                  </div>
+                </article>
+              </div>
+              <p v-else class="muted">No sessions in current calendar.</p>
+            </article>
+          </section>
+        </section>
+      </template>
+    </main>
+
+    <div class="toast-stack" aria-live="polite">
+      <article v-for="toast in toasts" :key="toast.id" :class="['toast', `toast--${toast.type}`]">
+        {{ toast.message }}
+      </article>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+  <script src="./main.js"></script>
+</body>
+</html>
