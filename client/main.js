@@ -124,6 +124,9 @@ createApp({
         sessions: false,
       },
       toasts: [],
+      sidebarOpen: false,
+      calViewDate: new Date(),
+      selectedDay: null,
     };
   },
   computed: {
@@ -172,6 +175,150 @@ createApp({
     unpaidSessionsCount() {
       return this.sessions.filter((session) => !session.isPaid).length;
     },
+    calViewMonth() {
+      return this.calViewDate.getMonth();
+    },
+    calViewYear() {
+      return this.calViewDate.getFullYear();
+    },
+    calViewLabel() {
+      return this.calViewDate.toLocaleString("en-US", { month: "long", year: "numeric" });
+    },
+    calendarDays() {
+      const year = this.calViewYear;
+      const month = this.calViewMonth;
+      const firstDay = new Date(year, month, 1);
+      const lastDay = new Date(year, month + 1, 0);
+      const startDow = (firstDay.getDay() + 6) % 7;
+      const totalDays = lastDay.getDate();
+
+      const today = new Date();
+      const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+
+      const days = [];
+
+      for (let i = 0; i < startDow; i++) {
+        const d = new Date(year, month, -startDow + i + 1);
+        days.push({ date: d, day: d.getDate(), outside: true, isToday: false, key: this._dateKey(d) });
+      }
+
+      for (let d = 1; d <= totalDays; d++) {
+        const date = new Date(year, month, d);
+        const key = this._dateKey(date);
+        days.push({ date, day: d, outside: false, isToday: key === todayStr, key });
+      }
+
+      const remaining = 7 - (days.length % 7);
+      if (remaining < 7) {
+        for (let i = 1; i <= remaining; i++) {
+          const d = new Date(year, month + 1, i);
+          days.push({ date: d, day: d.getDate(), outside: true, isToday: false, key: this._dateKey(d) });
+        }
+      }
+
+      return days;
+    },
+    calendarEventMap() {
+      const map = {};
+      for (const ev of this.events) {
+        const key = this._dateKey(new Date(ev.startUtc));
+        if (!map[key]) map[key] = [];
+        map[key].push({ title: ev.title, type: "event", color: "var(--neon-cyan)" });
+      }
+      for (const task of this.tasks) {
+        if (!task.dueUtc) continue;
+        const key = this._dateKey(new Date(task.dueUtc));
+        if (!map[key]) map[key] = [];
+        const color = task.status === "Done" ? "var(--neon-green)" : task.priority === "High" ? "var(--neon-red)" : "var(--neon-yellow)";
+        map[key].push({ title: task.title, type: "task", color });
+      }
+      for (const s of this.sessions) {
+        const key = this._dateKey(new Date(s.sessionStartUtc));
+        if (!map[key]) map[key] = [];
+        map[key].push({ title: s.studentName, type: "session", color: "var(--neon-magenta)" });
+      }
+      return map;
+    },
+    selectedDayLabel() {
+      if (!this.selectedDay) return "";
+      return this.selectedDay.date.toLocaleDateString("en-US", {
+        weekday: "long",
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      });
+    },
+    dayViewHours() {
+      if (!this.selectedDay) return [];
+      const dayKey = this.selectedDay.key;
+      const allItems = [];
+
+      for (const ev of this.events) {
+        const start = new Date(ev.startUtc);
+        const end = new Date(ev.endUtc);
+        if (this._dateKey(start) === dayKey) {
+          const durMin = Math.round((end - start) / 60000);
+          allItems.push({
+            title: ev.title,
+            type: "Event",
+            color: "var(--neon-cyan)",
+            chipClass: "cyan",
+            startHour: start.getHours(),
+            durationSlots: Math.max(1, Math.ceil(durMin / 60)),
+            timeLabel: this._fmtTime(start) + " \u2013 " + this._fmtTime(end),
+            location: ev.location || "",
+          });
+        }
+      }
+
+      for (const task of this.tasks) {
+        if (!task.dueUtc) continue;
+        const due = new Date(task.dueUtc);
+        if (this._dateKey(due) !== dayKey) continue;
+        const color = task.status === "Done" ? "var(--neon-green)" : task.priority === "High" ? "var(--neon-red)" : "var(--neon-yellow)";
+        const chipClass = task.status === "Done" ? "green" : task.priority === "High" ? "red" : "yellow";
+        allItems.push({
+          title: task.title,
+          type: "Task",
+          color,
+          chipClass,
+          startHour: due.getHours(),
+          durationSlots: 1,
+          timeLabel: this._fmtTime(due) + " due",
+          location: "",
+        });
+      }
+
+      for (const s of this.sessions) {
+        const start = new Date(s.sessionStartUtc);
+        const end = new Date(s.sessionEndUtc);
+        if (this._dateKey(start) !== dayKey) continue;
+        const durMin = Math.round((end - start) / 60000);
+        allItems.push({
+          title: s.studentName,
+          type: "Session",
+          color: "var(--neon-magenta)",
+          chipClass: "magenta",
+          startHour: start.getHours(),
+          durationSlots: Math.max(1, Math.ceil(durMin / 60)),
+          timeLabel: this._fmtTime(start) + " \u2013 " + this._fmtTime(end),
+          location: s.topicPlanned || "",
+        });
+      }
+
+      const hours = [];
+      for (let h = 0; h < 24; h++) {
+        hours.push({
+          hour: h,
+          label: String(h).padStart(2, "0") + ":00",
+          items: allItems.filter((item) => item.startHour === h),
+        });
+      }
+      return hours;
+    },
+    dayViewHasItems() {
+      return this.dayViewHours.some((h) => h.items.length > 0);
+    },
   },
   watch: {
     async selectedCalendarId(newValue, oldValue) {
@@ -189,6 +336,37 @@ createApp({
     }
   },
   methods: {
+    toggleSidebar() {
+      this.sidebarOpen = !this.sidebarOpen;
+    },
+    _dateKey(d) {
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    },
+    _fmtTime(d) {
+      return String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0");
+    },
+    selectDay(cell) {
+      if (cell.outside) return;
+      this.selectedDay = this.selectedDay && this.selectedDay.key === cell.key ? null : cell;
+    },
+    closeDayView() {
+      this.selectedDay = null;
+    },
+    calPrev() {
+      this.calViewDate = new Date(this.calViewYear, this.calViewMonth - 1, 1);
+      this.selectedDay = null;
+    },
+    calNext() {
+      this.calViewDate = new Date(this.calViewYear, this.calViewMonth + 1, 1);
+      this.selectedDay = null;
+    },
+    calToday() {
+      this.calViewDate = new Date();
+      this.selectedDay = null;
+    },
+    getItemsForDay(dayKey) {
+      return this.calendarEventMap[dayKey] || [];
+    },
     addToast(message, type = "info") {
       const toast = {
         id: `${Date.now()}-${Math.random()}`,
