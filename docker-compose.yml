@@ -1,0 +1,45 @@
+services:
+  db:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: calendar-tasking-db
+    environment:
+      ACCEPT_EULA: "Y"
+      SA_PASSWORD: "${SA_PASSWORD:-YourStrong!Passw0rd}"
+    ports:
+      - "14333:1433"
+    volumes:
+      - sql_data:/var/opt/mssql
+
+  db-init:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: calendar-tasking-db-init
+    depends_on:
+      - db
+    environment:
+      DB_HOST: db
+      DB_PORT: "1433"
+      SA_PASSWORD: "${SA_PASSWORD:-YourStrong!Passw0rd}"
+    volumes:
+      - ./database:/scripts:ro
+      - ./docker:/docker:ro
+    entrypoint: ["/bin/bash", "/docker/init-db.sh"]
+    restart: "no"
+
+  api:
+    build:
+      context: .
+      dockerfile: src/CalendarTasking.Api/Dockerfile
+    container_name: calendar-tasking-api
+    depends_on:
+      db-init:
+        condition: service_completed_successfully
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:8080
+      Database__InitializeOnStartup: "false"
+      ConnectionStrings__DefaultConnection: "Server=db,1433;Database=CalendarTaskingDb;User Id=sa;Password=${SA_PASSWORD:-YourStrong!Passw0rd};TrustServerCertificate=True;Encrypt=True;MultipleActiveResultSets=true"
+    ports:
+      - "5170:8080"
+
+volumes:
+  sql_data:

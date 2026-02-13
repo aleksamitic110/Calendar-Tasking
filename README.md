@@ -44,6 +44,41 @@ API docs/testing in development:
 - Vue user app: `http://localhost:5170/`
 - Vue API lab: `http://localhost:5170/api-lab.html`
 
+## Docker Setup (API + SQL Server)
+
+1. Create environment file from template:
+
+```powershell
+copy .env.example .env
+```
+
+2. Start stack:
+
+```powershell
+docker compose up --build
+```
+
+3. App endpoints:
+
+- API + client: `http://localhost:5170/`
+- Swagger: `http://localhost:5170/swagger`
+
+Notes:
+
+- SQL Server is exposed on `localhost:14333`.
+- On first startup, `database/schema.sql` and `database/seed.sql` are applied automatically by `db-init`.
+- To stop and remove containers:
+
+```powershell
+docker compose down
+```
+
+- To also remove DB volume:
+
+```powershell
+docker compose down -v
+```
+
 You can also test with the VS Code REST Client using:
 
 - `src/CalendarTasking.Api/CalendarTasking.Api.http`
@@ -54,6 +89,21 @@ You can also test with the VS Code REST Client using:
 - The backend serves this folder directly, so running the API also serves the client.
 - End-user app is `client/index.html` + `client/main.js` + `client/styles.css` (register/login + calendars/tasks/events/private sessions).
 - API testing panel is preserved in `client/api-lab.html` + `client/api-lab.js` + `client/api-lab.css`.
+
+## QA Folder (Separated From App Code)
+
+`qa/` is a separate area for assignment testing deliverables:
+
+- `qa/component-tests/CalendarTasking.ComponentTests` (NUnit component tests)
+- `qa/playwright-tests/CalendarTasking.PlaywrightTests` (Playwright for .NET E2E/API tests)
+- `qa/CalendarTasking.QA.sln` (separate solution for QA work)
+
+Run QA solution:
+
+```powershell
+dotnet restore qa/CalendarTasking.QA.sln
+dotnet test qa/CalendarTasking.QA.sln
+```
 
 ## Main Endpoints
 
