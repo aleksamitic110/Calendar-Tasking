@@ -3,24 +3,34 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Calendar Tasking</title>
+  <title>Calendar Tasking // Cyberpunk</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;500;600;700;800&family=Newsreader:opsz,wght@6..72,500;6..72,700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Exo+2:wght@300;400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="./styles.css">
 </head>
 <body>
+  <div class="scanlines"></div>
+
   <div id="app" v-cloak>
     <div class="ambient ambient--a"></div>
     <div class="ambient ambient--b"></div>
+    <div class="ambient ambient--c"></div>
 
     <header v-if="isAuthenticated" class="topbar">
       <div class="brand">
-        <p class="eyebrow">Calendar Tasking</p>
-        <h1>Personal Workspace</h1>
+        <p class="eyebrow">// System Online</p>
+        <h1 class="glitch" data-text="Calendar Tasking">Calendar Tasking</h1>
       </div>
       <div class="topbar__actions">
-        <label class="field compact">
+        <button type="button" class="btn-hamburger" @click="toggleSidebar" aria-label="Toggle menu">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="3" y1="6" x2="21" y2="6"></line>
+            <line x1="3" y1="12" x2="21" y2="12"></line>
+            <line x1="3" y1="18" x2="21" y2="18"></line>
+          </svg>
+        </button>
+        <label class="field topbar__field">
           <span>Active calendar</span>
           <select v-model.number="selectedCalendarId">
             <option v-for="calendar in calendars" :key="calendar.calendarId" :value="calendar.calendarId">
@@ -28,50 +38,66 @@
             </option>
           </select>
         </label>
-        <button type="button" class="btn ghost" @click="activePage = 'calendars'">Manage Calendars</button>
-        <button type="button" class="btn ghost" @click="logout">Log out</button>
+        <button type="button" class="btn topbar__btn" @click="activePage = 'calendars'">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+          Manage
+        </button>
+        <button type="button" class="btn topbar__btn topbar__btn--logout" @click="logout">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+          Logout
+        </button>
       </div>
     </header>
 
     <main :class="['app-shell', { 'app-shell--auth': !isAuthenticated }]">
       <section v-if="!isAuthenticated" class="auth-shell">
         <article class="auth-intro">
-          <p class="eyebrow">Real User Client</p>
-          <h2>Organize your calendar, tasks, events, and lessons</h2>
+          <p class="eyebrow">// Access Terminal</p>
+          <h2>Welcome to the<br><span class="text-glow-yellow">Grid</span></h2>
           <p>
-            Register an account, create your own calendars, then manage daily tasks and schedules in one place.
+            Initialize your neural link. Create calendars, manage tasks, schedule events, and track sessions in one cybernetic workspace.
           </p>
           <div class="seed-note">
-            <p><strong>Seed login:</strong> ana@example.com / Pass123!</p>
+            <p class="eyebrow">// Quick Access</p>
+            <p><strong>ana@example.com</strong> / <strong>Pass123!</strong></p>
           </div>
         </article>
 
         <article class="auth-card">
           <div class="switch">
-            <button type="button" :class="['switch-btn', { active: authMode === 'login' }]" @click="authMode = 'login'">Login</button>
-            <button type="button" :class="['switch-btn', { active: authMode === 'register' }]" @click="authMode = 'register'">Register</button>
+            <button type="button" :class="['switch-btn', { active: authMode === 'login' }]" @click="authMode = 'login'">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path><polyline points="10 17 15 12 10 7"></polyline><line x1="15" y1="12" x2="3" y2="12"></line></svg>
+              Login
+            </button>
+            <button type="button" :class="['switch-btn', { active: authMode === 'register' }]" @click="authMode = 'register'">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><line x1="20" y1="8" x2="20" y2="14"></line><line x1="23" y1="11" x2="17" y2="11"></line></svg>
+              Register
+            </button>
           </div>
 
           <form v-if="authMode === 'login'" class="stack" @submit.prevent="submitLogin">
             <label class="field">
               <span>Email</span>
-              <input v-model.trim="loginForm.email" type="email" required autocomplete="username">
+              <input v-model.trim="loginForm.email" type="email" required autocomplete="username" placeholder="user@network.corp">
             </label>
             <label class="field">
               <span>Password</span>
-              <input v-model="loginForm.password" type="password" required autocomplete="current-password">
+              <input v-model="loginForm.password" type="password" required autocomplete="current-password" placeholder="Enter passkey...">
             </label>
-            <button type="submit" class="btn primary" :disabled="busy.auth">{{ busy.auth ? "Signing in..." : "Sign in" }}</button>
+            <button type="submit" class="btn primary" :disabled="busy.auth">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+              {{ busy.auth ? "Connecting..." : "Jack In" }}
+            </button>
           </form>
 
           <form v-else class="stack" @submit.prevent="submitRegister">
             <label class="field">
               <span>Email</span>
-              <input v-model.trim="registerForm.email" type="email" required autocomplete="email">
+              <input v-model.trim="registerForm.email" type="email" required autocomplete="email" placeholder="user@network.corp">
             </label>
             <label class="field">
               <span>Password</span>
-              <input v-model="registerForm.password" type="password" minlength="6" required autocomplete="new-password">
+              <input v-model="registerForm.password" type="password" minlength="6" required autocomplete="new-password" placeholder="Min 6 characters">
             </label>
             <div class="split">
               <label class="field">
@@ -87,15 +113,19 @@
               <span>Time zone</span>
               <input v-model.trim="registerForm.timeZoneId" type="text" placeholder="UTC">
             </label>
-            <button type="submit" class="btn primary" :disabled="busy.auth">{{ busy.auth ? "Creating..." : "Create account" }}</button>
+            <button type="submit" class="btn primary" :disabled="busy.auth">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+              {{ busy.auth ? "Initializing..." : "Create Identity" }}
+            </button>
           </form>
         </article>
       </section>
 
       <template v-else>
-        <aside class="sidebar">
+        <div v-if="sidebarOpen" class="sidebar-overlay" @click="sidebarOpen = false"></div>
+        <aside :class="['sidebar', { open: sidebarOpen }]">
           <article class="user-card">
-            <p class="eyebrow">Signed in</p>
+            <p class="eyebrow">// Operator</p>
             <h3>{{ userDisplayName }}</h3>
             <p>{{ user?.email }}</p>
           </article>
@@ -106,14 +136,19 @@
               :key="page.key"
               type="button"
               :class="['menu-btn', { active: activePage === page.key }]"
-              @click="activePage = page.key">
+              @click="activePage = page.key; sidebarOpen = false">
+              <svg v-if="page.key === 'overview'" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+              <svg v-if="page.key === 'calendars'" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+              <svg v-if="page.key === 'tasks'" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
+              <svg v-if="page.key === 'events'" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+              <svg v-if="page.key === 'sessions'" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
               {{ page.label }}
             </button>
           </nav>
 
           <article class="sidebar-note">
-            <p class="eyebrow">Testing</p>
-            <p>Need raw endpoint testing?</p>
+            <p class="eyebrow">// Dev Tools</p>
+            <p>Raw endpoint testing interface</p>
             <a href="./api-lab.html">Open API Lab</a>
           </article>
         </aside>
@@ -122,11 +157,14 @@
           <section v-show="activePage === 'overview'" class="page">
             <div class="page-head">
               <div>
-                <p class="eyebrow">Overview</p>
-                <h2>Today at a glance</h2>
-                <p class="muted">Current calendar: <strong>{{ activeCalendarName || "None selected" }}</strong></p>
+                <p class="eyebrow">// Dashboard</p>
+                <h2>System Overview</h2>
+                <p class="muted">Active node: <strong>{{ activeCalendarName || "None selected" }}</strong></p>
               </div>
-              <button type="button" class="btn ghost" @click="refreshAll">Refresh all</button>
+              <button type="button" class="btn ghost" @click="refreshAll">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+                Refresh
+              </button>
             </div>
 
             <div class="stats-grid">
@@ -147,6 +185,81 @@
                 <h3>{{ unpaidSessionsCount }}</h3>
               </article>
             </div>
+
+            <article class="panel cal-panel">
+              <div class="cal-header">
+                <button type="button" class="btn ghost cal-nav" @click="calPrev" aria-label="Previous month">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                </button>
+                <div class="cal-title">
+                  <h3>{{ calViewLabel }}</h3>
+                  <button type="button" class="btn ghost cal-today-btn" @click="calToday">Today</button>
+                </div>
+                <button type="button" class="btn ghost cal-nav" @click="calNext" aria-label="Next month">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                </button>
+              </div>
+              <div class="cal-grid">
+                <div class="cal-dow" v-for="dow in ['Mon','Tue','Wed','Thu','Fri','Sat','Sun']" :key="dow">{{ dow }}</div>
+                <div
+                  v-for="(cell, idx) in calendarDays"
+                  :key="'cd-' + idx"
+                  :class="['cal-cell', { 'cal-cell--outside': cell.outside, 'cal-cell--today': cell.isToday, 'cal-cell--selected': selectedDay && selectedDay.key === cell.key }]"
+                  @click="selectDay(cell)">
+                  <span class="cal-day-num">{{ cell.day }}</span>
+                  <div class="cal-items">
+                    <div
+                      v-for="(item, i) in getItemsForDay(cell.key).slice(0, 3)"
+                      :key="'ci-' + i"
+                      class="cal-item"
+                      :style="{ borderLeftColor: item.color }"
+                      :title="item.title">
+                      {{ item.title }}
+                    </div>
+                    <span v-if="getItemsForDay(cell.key).length > 3" class="cal-more">+{{ getItemsForDay(cell.key).length - 3 }} more</span>
+                  </div>
+                </div>
+              </div>
+              <div class="cal-legend">
+                <span class="cal-legend-item"><span class="cal-legend-dot" style="background:var(--neon-cyan)"></span> Events</span>
+                <span class="cal-legend-item"><span class="cal-legend-dot" style="background:var(--neon-yellow)"></span> Tasks</span>
+                <span class="cal-legend-item"><span class="cal-legend-dot" style="background:var(--neon-magenta)"></span> Sessions</span>
+                <span class="cal-legend-item"><span class="cal-legend-dot" style="background:var(--neon-green)"></span> Done</span>
+                <span class="cal-legend-item"><span class="cal-legend-dot" style="background:var(--neon-red)"></span> High priority</span>
+              </div>
+
+              <div v-if="selectedDay" class="day-view">
+                <div class="day-view-header">
+                  <button type="button" class="btn ghost" @click="closeDayView">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                    Back
+                  </button>
+                  <h3>{{ selectedDayLabel }}</h3>
+                </div>
+                <div v-if="dayViewHasItems" class="day-view-timeline">
+                  <div v-for="h in dayViewHours" :key="h.hour" :class="['day-hour-row', { 'day-hour-row--empty': !h.items.length }]">
+                    <span class="day-hour-label">{{ h.label }}</span>
+                    <div class="day-hour-content">
+                      <div
+                        v-for="(item, i) in h.items"
+                        :key="i"
+                        class="day-hour-item"
+                        :style="{ borderLeftColor: item.color }">
+                        <span class="day-hour-item-time">{{ item.timeLabel }}</span>
+                        <span class="day-hour-item-title">{{ item.title }}</span>
+                        <span v-if="item.location" class="day-hour-item-loc">{{ item.location }}</span>
+                        <span :class="['chip', 'chip--' + item.chipClass]">{{ item.type }}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div v-else class="day-view-empty">
+                  <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" style="opacity:0.3"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                  <p>No events, tasks, or sessions on this day.</p>
+                  <p class="muted">Click another day or create new items.</p>
+                </div>
+              </div>
+            </article>
 
             <div class="two-col">
               <article class="panel">
@@ -216,14 +329,14 @@
               <div v-if="calendars.length" class="card-list">
                 <article v-for="calendar in calendars" :key="calendar.calendarId" class="item-card">
                   <div class="item-top">
-                    <div class="dot" :style="{ backgroundColor: calendar.colorHex }"></div>
+                    <div class="dot" :style="{ backgroundColor: calendar.colorHex, boxShadow: '0 0 8px ' + calendar.colorHex }"></div>
                     <div>
                       <h4>{{ calendar.name }}</h4>
                       <p>{{ calendar.description || "No description" }}</p>
                     </div>
                   </div>
                   <div class="chip-row">
-                    <span v-if="calendar.isDefault" class="chip">Default</span>
+                    <span v-if="calendar.isDefault" class="chip chip--cyan">Default</span>
                     <span class="chip">{{ calendar.colorHex }}</span>
                   </div>
                   <div class="row-actions">
@@ -315,8 +428,8 @@
                       <p>{{ task.description || "No description" }}</p>
                     </div>
                     <div class="chip-row">
-                      <span class="chip">{{ task.priority }}</span>
-                      <span class="chip">{{ task.status }}</span>
+                      <span :class="['chip', { 'chip--green': task.priority === 'Low', 'chip--yellow': task.priority === 'Medium', 'chip--red': task.priority === 'High' }]">{{ task.priority }}</span>
+                      <span :class="['chip', { 'chip--cyan': task.status === 'Todo', 'chip--magenta': task.status === 'InProgress', 'chip--green': task.status === 'Done' }]">{{ task.status }}</span>
                     </div>
                   </div>
                   <p class="muted">Due: {{ formatDate(task.dueUtc) || "Not set" }}</p>
@@ -418,7 +531,7 @@
                     </div>
                     <div class="chip-row">
                       <span class="chip">{{ event.repeatType }}</span>
-                      <span class="chip">{{ event.status }}</span>
+                      <span :class="['chip', { 'chip--cyan': event.status === 'Planned', 'chip--red': event.status === 'Cancelled' }]">{{ event.status }}</span>
                     </div>
                   </div>
                   <p class="muted">{{ formatDate(event.startUtc) }} - {{ formatDate(event.endUtc) }}</p>
@@ -524,11 +637,16 @@
             <article class="panel">
               <div class="panel-head">
                 <h3>Sessions & monthly summary</h3>
-                <label class="field compact">
-                  <span>Month</span>
-                  <input v-model="summaryMonth" type="month">
-                </label>
-                <button type="button" class="btn ghost" @click="fetchMonthlySummary">Load summary</button>
+                <div class="panel-head__controls">
+                  <label class="field compact">
+                    <span>Month</span>
+                    <input v-model="summaryMonth" type="month">
+                  </label>
+                  <button type="button" class="btn ghost" @click="fetchMonthlySummary">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+                    Load summary
+                  </button>
+                </div>
               </div>
               <div class="stats-grid summary-grid">
                 <article class="stat-card">
@@ -558,7 +676,7 @@
                     </div>
                     <div class="chip-row">
                       <span class="chip">{{ session.status }}</span>
-                      <span class="chip">{{ session.isPaid ? "Paid" : "Unpaid" }}</span>
+                      <span :class="['chip', session.isPaid ? 'chip--green' : 'chip--red']">{{ session.isPaid ? "Paid" : "Unpaid" }}</span>
                     </div>
                   </div>
                   <p class="muted">{{ formatDate(session.sessionStartUtc) }} - {{ formatDate(session.sessionEndUtc) }}</p>
