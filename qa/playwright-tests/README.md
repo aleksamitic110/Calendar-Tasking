@@ -8,3 +8,5 @@ Target coverage:
 
 1. End-to-end UI flows through `client/` served by API.
 2. API tests through HTTP calls from Playwright test suite.
+
+This folder is currently scaffolded only (no concrete Playwright test files yet).

@@ -105,6 +105,14 @@ dotnet restore qa/CalendarTasking.QA.sln
 dotnet test qa/CalendarTasking.QA.sln
 ```
 
+Quick runner script:
+
+```powershell
+.\run-qa-tests.ps1 -Suite component
+.\run-qa-tests.ps1 -Suite component-templates
+.\run-qa-tests.ps1 -Suite all
+```
+
 ## Main Endpoints
 
 ### Users
