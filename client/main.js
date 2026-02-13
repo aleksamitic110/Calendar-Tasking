@@ -1,6 +1,8 @@
 const { createApp } = Vue;
 
 const USER_STORAGE_KEY = "calendar_tasking_user_v1";
+const DAY_SLOT_MINUTES = 15;
+const DAY_TIMELINE_PIXELS_PER_MINUTE = 1;
 
 const toInputDateTime = (value) => {
   if (!value) return "";
@@ -127,6 +129,7 @@ createApp({
       sidebarOpen: false,
       calViewDate: new Date(),
       selectedDay: null,
+      dragState: null,
     };
   },
   computed: {
@@ -248,27 +251,30 @@ createApp({
         day: "numeric",
       });
     },
-    dayViewHours() {
+    dayTimelineHours() {
+      return Array.from({ length: 24 }, (_, hour) => hour);
+    },
+    dayTimelineItems() {
       if (!this.selectedDay) return [];
       const dayKey = this.selectedDay.key;
-      const allItems = [];
+      const items = [];
 
       for (const ev of this.events) {
         const start = new Date(ev.startUtc);
         const end = new Date(ev.endUtc);
-        if (this._dateKey(start) === dayKey) {
-          const durMin = Math.round((end - start) / 60000);
-          allItems.push({
-            title: ev.title,
-            type: "Event",
-            color: "var(--neon-cyan)",
-            chipClass: "cyan",
-            startHour: start.getHours(),
-            durationSlots: Math.max(1, Math.ceil(durMin / 60)),
-            timeLabel: this._fmtTime(start) + " \u2013 " + this._fmtTime(end),
-            location: ev.location || "",
-          });
-        }
+        if (this._dateKey(start) !== dayKey) continue;
+        items.push({
+          key: `event-${ev.eventId}`,
+          sourceType: "event",
+          source: ev,
+          title: ev.title,
+          type: "Event",
+          color: "var(--neon-cyan)",
+          chipClass: "cyan",
+          location: ev.location || "",
+          startMinutes: start.getHours() * 60 + start.getMinutes(),
+          durationMinutes: Math.max(DAY_SLOT_MINUTES, Math.round((end - start) / 60000)),
+        });
       }
 
       for (const task of this.tasks) {
@@ -277,47 +283,45 @@ createApp({
         if (this._dateKey(due) !== dayKey) continue;
         const color = task.status === "Done" ? "var(--neon-green)" : task.priority === "High" ? "var(--neon-red)" : "var(--neon-yellow)";
         const chipClass = task.status === "Done" ? "green" : task.priority === "High" ? "red" : "yellow";
-        allItems.push({
+        items.push({
+          key: `task-${task.taskItemId}`,
+          sourceType: "task",
+          source: task,
           title: task.title,
           type: "Task",
           color,
           chipClass,
-          startHour: due.getHours(),
-          durationSlots: 1,
-          timeLabel: this._fmtTime(due) + " due",
           location: "",
+          startMinutes: due.getHours() * 60 + due.getMinutes(),
+          durationMinutes: 30,
         });
       }
 
-      for (const s of this.sessions) {
-        const start = new Date(s.sessionStartUtc);
-        const end = new Date(s.sessionEndUtc);
+      for (const session of this.sessions) {
+        const start = new Date(session.sessionStartUtc);
+        const end = new Date(session.sessionEndUtc);
         if (this._dateKey(start) !== dayKey) continue;
-        const durMin = Math.round((end - start) / 60000);
-        allItems.push({
-          title: s.studentName,
+        items.push({
+          key: `session-${session.privateClassSessionId}`,
+          sourceType: "session",
+          source: session,
+          title: session.studentName,
           type: "Session",
           color: "var(--neon-magenta)",
           chipClass: "magenta",
-          startHour: start.getHours(),
-          durationSlots: Math.max(1, Math.ceil(durMin / 60)),
-          timeLabel: this._fmtTime(start) + " \u2013 " + this._fmtTime(end),
-          location: s.topicPlanned || "",
+          location: session.topicPlanned || "",
+          startMinutes: start.getHours() * 60 + start.getMinutes(),
+          durationMinutes: Math.max(DAY_SLOT_MINUTES, Math.round((end - start) / 60000)),
         });
       }
 
-      const hours = [];
-      for (let h = 0; h < 24; h++) {
-        hours.push({
-          hour: h,
-          label: String(h).padStart(2, "0") + ":00",
-          items: allItems.filter((item) => item.startHour === h),
-        });
-      }
-      return hours;
+      return items.sort((a, b) => a.startMinutes - b.startMinutes);
+    },
+    dayTimelineHeightPx() {
+      return `${24 * 60 * DAY_TIMELINE_PIXELS_PER_MINUTE}px`;
     },
     dayViewHasItems() {
-      return this.dayViewHours.some((h) => h.items.length > 0);
+      return this.dayTimelineItems.length > 0;
     },
   },
   watch: {
@@ -335,6 +339,9 @@ createApp({
       await this.initializeWorkspace();
     }
   },
+  unmounted() {
+    this.cancelTimelineDrag();
+  },
   methods: {
     toggleSidebar() {
       this.sidebarOpen = !this.sidebarOpen;
@@ -345,22 +352,229 @@ createApp({
     _fmtTime(d) {
       return String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0");
     },
+    _roundMinutesToSlot(minutes) {
+      return Math.round(minutes / DAY_SLOT_MINUTES) * DAY_SLOT_MINUTES;
+    },
+    _clampMinutesToDay(minutes, durationMinutes = DAY_SLOT_MINUTES) {
+      const maxStart = Math.max(0, 24 * 60 - durationMinutes);
+      return Math.min(maxStart, Math.max(0, minutes));
+    },
+    _dayDateAtMinutes(minutes) {
+      if (!this.selectedDay) return null;
+      const clamped = this._clampMinutesToDay(minutes);
+      const hours = Math.floor(clamped / 60);
+      const mins = clamped % 60;
+      return new Date(
+        this.selectedDay.date.getFullYear(),
+        this.selectedDay.date.getMonth(),
+        this.selectedDay.date.getDate(),
+        hours,
+        mins,
+        0,
+        0
+      );
+    },
+    _dayDefaultStartMinutes() {
+      const nowValue = new Date();
+      if (this.selectedDay && this._dateKey(nowValue) === this.selectedDay.key) {
+        const roundedNow = this._roundMinutesToSlot(nowValue.getHours() * 60 + nowValue.getMinutes());
+        return this._clampMinutesToDay(roundedNow);
+      }
+      return 9 * 60;
+    },
+    _displayStartMinutes(item) {
+      if (this.dragState && this.dragState.itemKey === item.key) {
+        return this.dragState.currentStartMinutes;
+      }
+      return item.startMinutes;
+    },
+    dayTimelineItemStyle(item) {
+      const startMinutes = this._displayStartMinutes(item);
+      const top = startMinutes * DAY_TIMELINE_PIXELS_PER_MINUTE;
+      const height = Math.max(24, item.durationMinutes * DAY_TIMELINE_PIXELS_PER_MINUTE);
+      return {
+        top: `${top}px`,
+        height: `${height}px`,
+        borderLeftColor: item.color,
+      };
+    },
+    dayTimelineItemTime(item) {
+      const startDate = this._dayDateAtMinutes(this._displayStartMinutes(item));
+      if (!startDate) return "";
+      if (item.sourceType === "task") {
+        return `${this._fmtTime(startDate)} due`;
+      }
+      const endDate = new Date(startDate.getTime() + item.durationMinutes * 60000);
+      return `${this._fmtTime(startDate)} \u2013 ${this._fmtTime(endDate)}`;
+    },
+    quickCreateOnSelectedDay(type) {
+      if (!this.selectedDay || !this.selectedCalendarId) return;
+      const startDate = this._dayDateAtMinutes(this._dayDefaultStartMinutes());
+      if (!startDate) return;
+
+      if (type === "task") {
+        this.resetTaskForm();
+        this.taskForm.calendarId = this.selectedCalendarId;
+        this.taskForm.dueLocal = toInputDateTime(startDate);
+        this.activePage = "tasks";
+        return;
+      }
+
+      const endDate = new Date(startDate.getTime() + 60 * 60000);
+
+      if (type === "event") {
+        this.resetEventForm();
+        this.eventForm.calendarId = this.selectedCalendarId;
+        this.eventForm.startLocal = toInputDateTime(startDate);
+        this.eventForm.endLocal = toInputDateTime(endDate);
+        this.activePage = "events";
+        return;
+      }
+
+      this.resetSessionForm();
+      this.sessionForm.calendarId = this.selectedCalendarId;
+      this.sessionForm.sessionStartLocal = toInputDateTime(startDate);
+      this.sessionForm.sessionEndLocal = toInputDateTime(endDate);
+      this.activePage = "sessions";
+    },
+    startTimelineDrag(item, mouseEvent) {
+      if (mouseEvent.button !== 0) return;
+      mouseEvent.preventDefault();
+      this.dragState = {
+        itemKey: item.key,
+        sourceType: item.sourceType,
+        source: item.source,
+        initialY: mouseEvent.clientY,
+        initialStartMinutes: item.startMinutes,
+        currentStartMinutes: item.startMinutes,
+        durationMinutes: item.durationMinutes,
+      };
+      window.addEventListener("mousemove", this.onTimelineDragMove);
+      window.addEventListener("mouseup", this.onTimelineDragEnd);
+    },
+    onTimelineDragMove(mouseEvent) {
+      if (!this.dragState) return;
+      const deltaY = mouseEvent.clientY - this.dragState.initialY;
+      const deltaMinutesRaw = deltaY / DAY_TIMELINE_PIXELS_PER_MINUTE;
+      const snappedDelta = this._roundMinutesToSlot(deltaMinutesRaw);
+      const proposedStart = this.dragState.initialStartMinutes + snappedDelta;
+      this.dragState.currentStartMinutes = this._clampMinutesToDay(proposedStart, this.dragState.durationMinutes);
+    },
+    cancelTimelineDrag() {
+      this.dragState = null;
+      window.removeEventListener("mousemove", this.onTimelineDragMove);
+      window.removeEventListener("mouseup", this.onTimelineDragEnd);
+    },
+    async onTimelineDragEnd() {
+      if (!this.dragState) return;
+      const dragSnapshot = { ...this.dragState };
+      this.cancelTimelineDrag();
+
+      if (dragSnapshot.currentStartMinutes === dragSnapshot.initialStartMinutes) return;
+      await this.persistTimelineMove(dragSnapshot);
+    },
+    async persistTimelineMove(dragSnapshot) {
+      if (!this.selectedDay || !this.user) return;
+      const newStart = this._dayDateAtMinutes(dragSnapshot.currentStartMinutes);
+      if (!newStart) return;
+
+      try {
+        if (dragSnapshot.sourceType === "task") {
+          const task = dragSnapshot.source;
+          await this.apiRequest(`/api/tasks/${task.taskItemId}`, {
+            method: "PUT",
+            body: {
+              calendarId: Number(task.calendarId),
+              createdByUserId: task.createdByUserId ?? this.user.userId,
+              title: task.title,
+              description: task.description || null,
+              dueUtc: newStart.toISOString(),
+              priority: task.priority,
+              status: task.status,
+              completedAtUtc: task.completedAtUtc || (task.status === "Done" ? new Date().toISOString() : null),
+              reminderMinutesBefore: task.reminderMinutesBefore ?? null,
+            },
+          });
+          await this.refreshTasks();
+          this.addToast("Task moved.", "success");
+          return;
+        }
+
+        if (dragSnapshot.sourceType === "event") {
+          const event = dragSnapshot.source;
+          const newEnd = new Date(newStart.getTime() + dragSnapshot.durationMinutes * 60000);
+          await this.apiRequest(`/api/events/${event.eventId}`, {
+            method: "PUT",
+            body: {
+              calendarId: Number(event.calendarId),
+              createdByUserId: event.createdByUserId ?? this.user.userId,
+              title: event.title,
+              description: event.description || null,
+              location: event.location || null,
+              startUtc: newStart.toISOString(),
+              endUtc: newEnd.toISOString(),
+              isAllDay: !!event.isAllDay,
+              repeatType: event.repeatType,
+              reminderMinutesBefore: event.reminderMinutesBefore ?? null,
+              status: event.status,
+            },
+          });
+          await this.refreshEvents();
+          this.addToast("Event moved.", "success");
+          return;
+        }
+
+        const session = dragSnapshot.source;
+        const newEnd = new Date(newStart.getTime() + dragSnapshot.durationMinutes * 60000);
+        await this.apiRequest(`/api/private-class-sessions/${session.privateClassSessionId}`, {
+          method: "PUT",
+          body: {
+            calendarId: Number(session.calendarId),
+            createdByUserId: session.createdByUserId ?? this.user.userId,
+            studentName: session.studentName,
+            studentContact: session.studentContact || null,
+            sessionStartUtc: newStart.toISOString(),
+            sessionEndUtc: newEnd.toISOString(),
+            topicPlanned: session.topicPlanned || null,
+            topicDone: session.topicDone || null,
+            homeworkAssigned: session.homeworkAssigned || null,
+            priceAmount: Number(session.priceAmount || 0),
+            currencyCode: (session.currencyCode || "RSD").toUpperCase(),
+            isPaid: !!session.isPaid,
+            paidAtUtc: session.paidAtUtc || null,
+            paymentMethod: session.paymentMethod || null,
+            paymentNote: session.paymentNote || null,
+            status: session.status,
+          },
+        });
+        await this.refreshSessions();
+        await this.fetchMonthlySummary(true);
+        this.addToast("Session moved.", "success");
+      } catch (error) {
+        this.addToast(error.message, "error");
+      }
+    },
     selectDay(cell) {
       if (cell.outside) return;
+      this.cancelTimelineDrag();
       this.selectedDay = this.selectedDay && this.selectedDay.key === cell.key ? null : cell;
     },
     closeDayView() {
+      this.cancelTimelineDrag();
       this.selectedDay = null;
     },
     calPrev() {
+      this.cancelTimelineDrag();
       this.calViewDate = new Date(this.calViewYear, this.calViewMonth - 1, 1);
       this.selectedDay = null;
     },
     calNext() {
+      this.cancelTimelineDrag();
       this.calViewDate = new Date(this.calViewYear, this.calViewMonth + 1, 1);
       this.selectedDay = null;
     },
     calToday() {
+      this.cancelTimelineDrag();
       this.calViewDate = new Date();
       this.selectedDay = null;
     },
@@ -508,6 +722,7 @@ createApp({
       }
     },
     logout() {
+      this.cancelTimelineDrag();
       this.user = null;
       localStorage.removeItem(USER_STORAGE_KEY);
       this.activePage = "overview";

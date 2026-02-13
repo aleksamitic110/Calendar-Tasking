@@ -1227,12 +1227,20 @@ textarea {
   font-weight: 600;
 }
 
+.day-view-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-bottom: 0.6rem;
+}
+
 .day-view-timeline {
   max-height: 520px;
   overflow-y: auto;
   border: 1px solid var(--border-surface);
   border-radius: var(--radius);
   background: var(--bg-surface-3);
+  cursor: ns-resize;
 }
 
 .day-view-timeline::-webkit-scrollbar {
@@ -1252,53 +1260,61 @@ textarea {
   background: rgba(0, 255, 255, 0.4);
 }
 
-.day-hour-row {
-  display: grid;
-  grid-template-columns: 52px 1fr;
-  min-height: 44px;
-  border-bottom: 1px solid var(--border-surface);
+.day-timeline-track {
+  position: relative;
+  min-height: 960px;
+  background-image:
+    repeating-linear-gradient(
+      to bottom,
+      transparent,
+      transparent 14px,
+      rgba(255, 255, 255, 0.04) 14px,
+      rgba(255, 255, 255, 0.04) 15px
+    );
 }
 
-.day-hour-row:last-child {
-  border-bottom: none;
+.day-timeline-hour-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  border-top: 1px solid rgba(0, 255, 255, 0.18);
 }
 
-.day-hour-row--empty {
-  min-height: 28px;
-}
-
-.day-hour-label {
+.day-timeline-hour-label {
+  position: absolute;
+  left: 0.35rem;
+  top: -0.45rem;
   font-family: "Share Tech Mono", monospace;
   font-size: 0.7rem;
   color: var(--text-muted);
-  padding: 0.35rem 0.5rem 0 0;
-  text-align: right;
+  background: var(--bg-surface-3);
+  padding: 0 0.2rem;
   user-select: none;
 }
 
-.day-hour-content {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  padding: 0.2rem 0.4rem;
-  border-left: 1px solid var(--border-surface);
-  min-height: 100%;
-}
-
-.day-hour-item {
+.day-timeline-item {
+  position: absolute;
+  left: 4.4rem;
+  right: 0.45rem;
   display: flex;
   align-items: center;
   gap: 0.5rem;
   padding: 0.35rem 0.55rem;
   border-left: 3px solid var(--neon-cyan);
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(255, 255, 255, 0.06);
   border-radius: 0 var(--radius) var(--radius) 0;
   transition: var(--transition);
+  cursor: grab;
+  user-select: none;
 }
 
-.day-hour-item:hover {
-  background: rgba(255, 255, 255, 0.06);
+.day-timeline-item:hover {
+  background: rgba(255, 255, 255, 0.09);
   box-shadow: 0 0 12px rgba(0, 255, 255, 0.05);
+}
+
+.day-timeline-item:active {
+  cursor: grabbing;
 }
 
 .day-hour-item-time {
@@ -1330,7 +1346,7 @@ textarea {
   flex-shrink: 0;
 }
 
-.day-hour-item .chip {
+.day-timeline-item .chip {
   flex-shrink: 0;
 }
 
@@ -1532,7 +1548,7 @@ textarea {
     font-size: 0.58rem;
   }
 
-  .day-hour-item {
+  .day-timeline-item {
     flex-wrap: wrap;
     gap: 0.3rem;
   }
@@ -1639,16 +1655,12 @@ textarea {
     font-size: 0.85rem;
   }
 
-  .day-hour-row {
-    grid-template-columns: 40px 1fr;
-  }
-
-  .day-hour-label {
+  .day-timeline-hour-label {
     font-size: 0.62rem;
-    padding-right: 0.3rem;
   }
 
-  .day-hour-item {
+  .day-timeline-item {
+    left: 3.9rem;
     padding: 0.25rem 0.35rem;
     flex-wrap: wrap;
   }
