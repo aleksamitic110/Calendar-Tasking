@@ -1,4 +1,4 @@
-using System.Net;
+﻿using System.Net;
 using System.Net.Http.Json;
 using CalendarTasking.ComponentTests.Infrastructure;
 
@@ -6,9 +6,6 @@ namespace CalendarTasking.ComponentTests.Templates;
 
 public sealed class UsersCrudTemplateTests : ComponentTestBase
 {
-    private const string TemplateIgnoreReason = "Template only. Implement test logic and remove [Ignore].";
-    private const string TemplateFailMessage = "Template test. Add arrange/act/assert and remove [Ignore].";
-
     [Test]
     public async Task Create_Register_ShouldReturnCreated_WhenPayloadIsValid_Template01()
     {
@@ -24,17 +21,25 @@ public sealed class UsersCrudTemplateTests : ComponentTestBase
     }
 
     [Test]
-    [Ignore(TemplateIgnoreReason)]
-    public void Create_Register_ShouldReturnBadRequest_WhenPayloadIsInvalid_Template02()
+    public async Task Create_Register_ShouldReturnBadRequest_WhenPayloadIsInvalid_Template02()
     {
-        Assert.Fail(TemplateFailMessage);
+        var invalidRequest = new RegisterUserRequestDto("not-an-email", "123", "Ana", "Test", "UTC");
+
+        var response = await Client.PostAsJsonAsync("/api/users/register", invalidRequest);
+
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
     }
 
     [Test]
-    [Ignore(TemplateIgnoreReason)]
-    public void Create_Register_ShouldReturnConflict_WhenEmailAlreadyExists_Template03()
+    public async Task Create_Register_ShouldReturnConflict_WhenEmailAlreadyExists_Template03()
     {
-        Assert.Fail(TemplateFailMessage);
+        var email = $"users-duplicate-{Guid.NewGuid():N}@example.com";
+        await Client.RegisterUserAsync(email);
+        var duplicateRequest = new RegisterUserRequestDto($" {email.ToUpperInvariant()} ", "Pass123!", "Dup", "User", "UTC");
+
+        var response = await Client.PostAsJsonAsync("/api/users/register", duplicateRequest);
+
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Conflict));
     }
 
     [Test]
@@ -54,38 +59,74 @@ public sealed class UsersCrudTemplateTests : ComponentTestBase
     }
 
     [Test]
-    [Ignore(TemplateIgnoreReason)]
-    public void ReadAll_ShouldReturnOkAndEmptyList_WhenNoUsersExist_Template02()
+    public async Task ReadAll_ShouldReturnOkAndEmptyList_WhenNoUsersExist_Template02()
     {
-        Assert.Fail(TemplateFailMessage);
+        var response = await Client.GetAsync("/api/users");
+
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        var users = await response.Content.ReadFromJsonAsync<List<UserResponseDto>>();
+        Assert.That(users, Is.Not.Null);
+        Assert.That(users!, Is.Empty);
     }
 
     [Test]
-    [Ignore(TemplateIgnoreReason)]
-    public void ReadAll_ShouldReturnUsersOrderedById_Template03()
+    public async Task ReadAll_ShouldReturnUsersOrderedById_Template03()
     {
-        Assert.Fail(TemplateFailMessage);
+        await Client.RegisterUserAsync();
+        await Client.RegisterUserAsync();
+        await Client.RegisterUserAsync();
+
+        var response = await Client.GetAsync("/api/users");
+
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        var users = await response.Content.ReadFromJsonAsync<List<UserResponseDto>>();
+        Assert.That(users, Is.Not.Null);
+
+        var ids = users!.Select(x => x.UserId).ToList();
+        Assert.That(ids, Is.Ordered.Ascending);
     }
 
     [Test]
-    [Ignore(TemplateIgnoreReason)]
-    public void ReadById_ShouldReturnOk_WhenUserExists_Template01()
+    public async Task ReadById_ShouldReturnOk_WhenUserExists_Template01()
     {
-        Assert.Fail(TemplateFailMessage);
+        var user = await Client.RegisterUserAsync();
+
+        var response = await Client.GetAsync($"/api/users/{user.UserId}");
+
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        var found = await response.Content.ReadFromJsonAsync<UserResponseDto>();
+        Assert.That(found, Is.Not.Null);
+        Assert.That(found!.UserId, Is.EqualTo(user.UserId));
     }
 
     [Test]
-    [Ignore(TemplateIgnoreReason)]
-    public void ReadById_ShouldReturnNotFound_WhenUserDoesNotExist_Template02()
+    public async Task ReadById_ShouldReturnNotFound_WhenUserDoesNotExist_Template02()
     {
-        Assert.Fail(TemplateFailMessage);
+        var response = await Client.GetAsync("/api/users/999999");
+
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
     }
 
     [Test]
-    [Ignore(TemplateIgnoreReason)]
-    public void ReadById_ShouldReturnConsistentUserPayload_Template03()
+    public async Task ReadById_ShouldReturnConsistentUserPayload_Template03()
     {
-        Assert.Fail(TemplateFailMessage);
+        var email = $"users-read-{Guid.NewGuid():N}@example.com";
+        var registerRequest = new RegisterUserRequestDto(email, "Pass123!", "Mila", "Nikolic", "Europe/Belgrade");
+        var createResponse = await Client.PostAsJsonAsync("/api/users/register", registerRequest);
+        var created = await createResponse.Content.ReadFromJsonAsync<UserResponseDto>();
+        Assert.That(created, Is.Not.Null);
+
+        var response = await Client.GetAsync($"/api/users/{created!.UserId}");
+
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        var fetched = await response.Content.ReadFromJsonAsync<UserResponseDto>();
+        Assert.That(fetched, Is.Not.Null);
+        Assert.That(fetched!.UserId, Is.EqualTo(created.UserId));
+        Assert.That(fetched.Email, Is.EqualTo(email));
+        Assert.That(fetched.FirstName, Is.EqualTo("Mila"));
+        Assert.That(fetched.LastName, Is.EqualTo("Nikolic"));
+        Assert.That(fetched.TimeZoneId, Is.EqualTo("Europe/Belgrade"));
+        Assert.That(fetched.IsActive, Is.True);
     }
 
     [Test]
@@ -109,17 +150,31 @@ public sealed class UsersCrudTemplateTests : ComponentTestBase
     }
 
     [Test]
-    [Ignore(TemplateIgnoreReason)]
-    public void Update_ShouldReturnNotFound_WhenUserDoesNotExist_Template02()
+    public async Task Update_ShouldReturnNotFound_WhenUserDoesNotExist_Template02()
     {
-        Assert.Fail(TemplateFailMessage);
+        var request = new UpdateUserRequestDto(
+            $"missing-user-{Guid.NewGuid():N}@example.com",
+            "Missing",
+            "User",
+            "UTC",
+            true);
+
+        var response = await Client.PutAsJsonAsync("/api/users/999999", request);
+
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
     }
 
     [Test]
-    [Ignore(TemplateIgnoreReason)]
-    public void Update_ShouldReturnConflict_WhenEmailIsAlreadyUsed_Template03()
+    public async Task Update_ShouldReturnConflict_WhenEmailIsAlreadyUsed_Template03()
     {
-        Assert.Fail(TemplateFailMessage);
+        var first = await Client.RegisterUserAsync();
+        var second = await Client.RegisterUserAsync();
+
+        var request = new UpdateUserRequestDto(first.Email, "Second", "User", "UTC", true);
+
+        var response = await Client.PutAsJsonAsync($"/api/users/{second.UserId}", request);
+
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Conflict));
     }
 
     [Test]
@@ -136,16 +191,28 @@ public sealed class UsersCrudTemplateTests : ComponentTestBase
     }
 
     [Test]
-    [Ignore(TemplateIgnoreReason)]
-    public void Delete_ShouldReturnNotFound_WhenUserDoesNotExist_Template02()
+    public async Task Delete_ShouldReturnNotFound_WhenUserDoesNotExist_Template02()
     {
-        Assert.Fail(TemplateFailMessage);
+        var response = await Client.DeleteAsync("/api/users/999999");
+
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
     }
 
     [Test]
-    [Ignore(TemplateIgnoreReason)]
-    public void Delete_ShouldRemoveUser_FromSubsequentReads_Template03()
+    public async Task Delete_ShouldRemoveUser_FromSubsequentReads_Template03()
     {
-        Assert.Fail(TemplateFailMessage);
+        var first = await Client.RegisterUserAsync();
+        var second = await Client.RegisterUserAsync();
+
+        var deleteResponse = await Client.DeleteAsync($"/api/users/{first.UserId}");
+        Assert.That(deleteResponse.StatusCode, Is.EqualTo(HttpStatusCode.NoContent));
+
+        var allResponse = await Client.GetAsync("/api/users");
+        Assert.That(allResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+
+        var users = await allResponse.Content.ReadFromJsonAsync<List<UserResponseDto>>();
+        Assert.That(users, Is.Not.Null);
+        Assert.That(users!.Select(x => x.UserId), Does.Not.Contain(first.UserId));
+        Assert.That(users.Select(x => x.UserId), Does.Contain(second.UserId));
     }
 }

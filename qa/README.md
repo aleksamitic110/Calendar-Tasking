@@ -1,4 +1,4 @@
-# QA Structure
+﻿# QA Structure
 
 This folder is intentionally separated from `src/` and `client/` so QA work can be delivered and run independently.
 
@@ -30,7 +30,14 @@ API operations in this project:
 - `Tasks`: GET all, GET by id, POST, PUT, PUT status, DELETE
 - `PrivateClassSessions`: GET all, GET by id, GET unpaid, GET monthly-summary, POST, PUT, PUT mark-paid, PUT mark-unpaid, DELETE
 
-Total operations to eventually cover with 3 NUnit tests each: `32 operations`.
+Total operations covered: `32 operations`.
+
+## Component Test Status
+
+- `96` implemented NUnit component tests (`3` per operation)
+- `75` CRUD tests under `component-tests/CalendarTasking.ComponentTests/Templates`
+- `21` custom operation tests under `component-tests/CalendarTasking.ComponentTests/Custom`
+- No ignored placeholders in component test code
 
 ## Suggested Workflow
 
@@ -50,29 +57,9 @@ Quick runner from repository root:
 - Optional Playwright browser install: `.\run-qa-tests.ps1 -Suite playwright -InstallPlaywright`
 - Optional custom base URL: `.\run-qa-tests.ps1 -Suite playwright -BaseUrl http://localhost:5170`
 
-CRUD component templates included:
+Run only component custom tests:
 
-- `component-tests/CalendarTasking.ComponentTests/Templates/UsersCrudTemplateTests.cs`
-- `component-tests/CalendarTasking.ComponentTests/Templates/CalendarsCrudTemplateTests.cs`
-- `component-tests/CalendarTasking.ComponentTests/Templates/EventsCrudTemplateTests.cs`
-- `component-tests/CalendarTasking.ComponentTests/Templates/TasksCrudTemplateTests.cs`
-- `component-tests/CalendarTasking.ComponentTests/Templates/PrivateClassSessionsCrudTemplateTests.cs`
-
-Scaffolded scope:
-
-- CRUD only (`25 operations` across 5 resources)
-- `20` implemented NUnit tests (one per CRUD action per resource)
-- `55` ignored placeholders still available in templates
-- Custom endpoints still need separate templates/tests (`login`, `password`, `task status`, `unpaid`, `monthly-summary`, `mark-paid`, `mark-unpaid`)
-
-Template rule:
-
-- Remaining placeholders are marked with `[Ignore]`.
-- Implement test logic and then remove `[Ignore]` for that specific test.
-
-Run only CRUD template tests:
-
-- `dotnet test .\component-tests\CalendarTasking.ComponentTests\CalendarTasking.ComponentTests.csproj --filter "FullyQualifiedName~Templates"`
+- `dotnet test .\component-tests\CalendarTasking.ComponentTests\CalendarTasking.ComponentTests.csproj --filter "FullyQualifiedName~Custom"`
 
 Playwright setup and run:
 
