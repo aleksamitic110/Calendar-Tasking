@@ -6,6 +6,10 @@
 USE [CalendarTaskingDb];
 GO
 
+SET ANSI_NULLS ON;
+SET QUOTED_IDENTIFIER ON;
+GO
+
 DECLARE @UserId INT;
 DECLARE @MainCalendarId INT;
 DECLARE @PrivateCalendarId INT;

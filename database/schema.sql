@@ -12,6 +12,10 @@ GO
 USE [CalendarTaskingDb];
 GO
 
+SET ANSI_NULLS ON;
+SET QUOTED_IDENTIFIER ON;
+GO
+
 IF OBJECT_ID('dbo.PrivateClassSessions', 'U') IS NOT NULL DROP TABLE dbo.PrivateClassSessions;
 IF OBJECT_ID('dbo.Tasks', 'U') IS NOT NULL DROP TABLE dbo.Tasks;
 IF OBJECT_ID('dbo.Events', 'U') IS NOT NULL DROP TABLE dbo.Events;

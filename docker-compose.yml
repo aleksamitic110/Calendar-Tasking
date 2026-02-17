@@ -6,7 +6,7 @@ services:
       ACCEPT_EULA: "Y"
       SA_PASSWORD: "${SA_PASSWORD:-YourStrong!Passw0rd}"
     ports:
-      - "14333:1433"
+      - "127.0.0.1:14333:1433"
     volumes:
       - sql_data:/var/opt/mssql
 
@@ -39,7 +39,7 @@ services:
       Database__InitializeOnStartup: "false"
       ConnectionStrings__DefaultConnection: "Server=db,1433;Database=CalendarTaskingDb;User Id=sa;Password=${SA_PASSWORD:-YourStrong!Passw0rd};TrustServerCertificate=True;Encrypt=True;MultipleActiveResultSets=true"
     ports:
-      - "5170:8080"
+      - "127.0.0.1:5170:8080"
 
 volumes:
   sql_data:

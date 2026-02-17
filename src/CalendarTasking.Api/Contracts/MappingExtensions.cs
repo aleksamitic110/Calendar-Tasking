@@ -4,6 +4,9 @@ namespace CalendarTasking.Api.Contracts;
 
 public static class MappingExtensions
 {
+    private static DateTime AsUtc(DateTime value) => DateTime.SpecifyKind(value, DateTimeKind.Utc);
+    private static DateTime? AsUtc(DateTime? value) => value.HasValue ? DateTime.SpecifyKind(value.Value, DateTimeKind.Utc) : null;
+
     public static UserResponse ToResponse(this User user)
     {
         return new UserResponse(
@@ -13,8 +16,8 @@ public static class MappingExtensions
             user.LastName,
             user.TimeZoneId,
             user.IsActive,
-            user.CreatedAtUtc,
-            user.UpdatedAtUtc);
+            AsUtc(user.CreatedAtUtc),
+            AsUtc(user.UpdatedAtUtc));
     }
 
     public static CalendarResponse ToResponse(this Calendar calendar)
@@ -26,8 +29,8 @@ public static class MappingExtensions
             calendar.Description,
             calendar.ColorHex,
             calendar.IsDefault,
-            calendar.CreatedAtUtc,
-            calendar.UpdatedAtUtc);
+            AsUtc(calendar.CreatedAtUtc),
+            AsUtc(calendar.UpdatedAtUtc));
     }
 
     public static EventResponse ToResponse(this Event calendarEvent)
@@ -39,14 +42,14 @@ public static class MappingExtensions
             calendarEvent.Title,
             calendarEvent.Description,
             calendarEvent.Location,
-            calendarEvent.StartUtc,
-            calendarEvent.EndUtc,
+            AsUtc(calendarEvent.StartUtc),
+            AsUtc(calendarEvent.EndUtc),
             calendarEvent.IsAllDay,
             calendarEvent.RepeatType,
             calendarEvent.ReminderMinutesBefore,
             calendarEvent.Status,
-            calendarEvent.CreatedAtUtc,
-            calendarEvent.UpdatedAtUtc);
+            AsUtc(calendarEvent.CreatedAtUtc),
+            AsUtc(calendarEvent.UpdatedAtUtc));
     }
 
     public static TaskResponse ToResponse(this TaskItem task)
@@ -57,13 +60,13 @@ public static class MappingExtensions
             task.CreatedByUserId,
             task.Title,
             task.Description,
-            task.DueUtc,
+            AsUtc(task.DueUtc),
             task.Priority,
             task.Status,
-            task.CompletedAtUtc,
+            AsUtc(task.CompletedAtUtc),
             task.ReminderMinutesBefore,
-            task.CreatedAtUtc,
-            task.UpdatedAtUtc);
+            AsUtc(task.CreatedAtUtc),
+            AsUtc(task.UpdatedAtUtc));
     }
 
     public static PrivateClassSessionResponse ToResponse(this PrivateClassSession session)
@@ -74,19 +77,19 @@ public static class MappingExtensions
             session.CreatedByUserId,
             session.StudentName,
             session.StudentContact,
-            session.SessionStartUtc,
-            session.SessionEndUtc,
+            AsUtc(session.SessionStartUtc),
+            AsUtc(session.SessionEndUtc),
             session.TopicPlanned,
             session.TopicDone,
             session.HomeworkAssigned,
             session.PriceAmount,
             session.CurrencyCode,
             session.IsPaid,
-            session.PaidAtUtc,
+            AsUtc(session.PaidAtUtc),
             session.PaymentMethod,
             session.PaymentNote,
             session.Status,
-            session.CreatedAtUtc,
-            session.UpdatedAtUtc);
+            AsUtc(session.CreatedAtUtc),
+            AsUtc(session.UpdatedAtUtc));
     }
 }

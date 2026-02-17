@@ -1,0 +1,71 @@
+﻿NUnit komponentni testovi - kratak rezime
+Datum: 2026-02-16
+
+1) Sta je dodato
+- Popunjeni su svi CRUD template testovi (uklonjeni su svi [Ignore] placeholder testovi).
+- Dodati su custom testovi za endpoint-e koji nisu klasican CRUD.
+- Playwright deo nije menjan.
+
+2) Gde su testovi
+CRUD (Templates):
+- qa/component-tests/CalendarTasking.ComponentTests/Templates/UsersCrudTemplateTests.cs
+- qa/component-tests/CalendarTasking.ComponentTests/Templates/CalendarsCrudTemplateTests.cs
+- qa/component-tests/CalendarTasking.ComponentTests/Templates/EventsCrudTemplateTests.cs
+- qa/component-tests/CalendarTasking.ComponentTests/Templates/TasksCrudTemplateTests.cs
+- qa/component-tests/CalendarTasking.ComponentTests/Templates/PrivateClassSessionsCrudTemplateTests.cs
+
+Custom operacije:
+- qa/component-tests/CalendarTasking.ComponentTests/Custom/UsersCustomOperationsTests.cs
+- qa/component-tests/CalendarTasking.ComponentTests/Custom/TasksCustomOperationsTests.cs
+- qa/component-tests/CalendarTasking.ComponentTests/Custom/PrivateClassSessionsCustomOperationsTests.cs
+
+3) Sta se testira (ukratko)
+Users:
+- CRUD: register, get all, get by id, update, delete (3 testa po operaciji)
+- Custom: login (valid/no pass/inactive), change password (valid/wrong current/not found)
+
+Calendars:
+- CRUD: create, read all + filter owner, read by id, update, delete (3 testa po operaciji)
+
+Events:
+- CRUD: create, read all + filter calendarId, read by id, update, delete (3 testa po operaciji)
+
+Tasks:
+- CRUD: create, read all + filter (calendarId/status), read by id, update, delete (3 testa po operaciji)
+- Custom: update status (/status) - valid, invalid status, not found
+
+PrivateClassSessions:
+- CRUD: create, read all + filter (calendarId/isPaid), read by id, update, delete (3 testa po operaciji)
+- Custom:
+  - unpaid endpoint
+  - monthly-summary endpoint
+  - mark-paid endpoint
+  - mark-unpaid endpoint
+  (svaki od ovih endpoint-a ima po 3 testa)
+
+4) Brojevi
+- Ukupno API operacija: 32
+- Ukupno testova: 96 (3 po operaciji)
+- Templates: 75 testova
+- Custom: 21 test
+
+5) Komande koje ti trebaju
+Iz root foldera projekta:
+
+- Svi komponentni testovi:
+  dotnet test qa/component-tests/CalendarTasking.ComponentTests/CalendarTasking.ComponentTests.csproj -v minimal
+
+- Samo CRUD templates:
+  dotnet test qa/component-tests/CalendarTasking.ComponentTests/CalendarTasking.ComponentTests.csproj --filter "FullyQualifiedName~Templates" -v minimal
+
+- Samo custom operacije:
+  dotnet test qa/component-tests/CalendarTasking.ComponentTests/CalendarTasking.ComponentTests.csproj --filter "FullyQualifiedName~Custom" -v minimal
+
+6) Kako brzo da se snadjes kasnije
+- Ako trazis CRUD pokrivenost: idi u Templates folder.
+- Ako trazis specijalne endpoint-e: idi u Custom folder.
+- Ako padne test, prvo proveri status kod koji endpoint vraca, zatim payload validaciju iz odgovarajuceg kontrolera u src/CalendarTasking.Api/Controllers.
+- Svi testovi koriste istu infrastrukturu:
+  - qa/component-tests/CalendarTasking.ComponentTests/Infrastructure/ComponentTestBase.cs
+  - qa/component-tests/CalendarTasking.ComponentTests/Infrastructure/CalendarTaskingApiFactory.cs
+  - qa/component-tests/CalendarTasking.ComponentTests/Infrastructure/ApiClientExtensions.cs

@@ -1,31 +1,35 @@
-# Component Tests (NUnit)
+﻿# Component Tests (NUnit)
 
-Place NUnit component tests for API endpoints in:
+NUnit component tests for API endpoints are in:
 
 - `CalendarTasking.ComponentTests`
 
-Scope plan:
+Coverage status:
 
-1. CRUD endpoints first (`Users`, `Calendars`, `Events`, `Tasks`, `PrivateClassSessions`)
-2. Then custom operations (`login`, `password change`, `mark paid/unpaid`, `monthly summary`, etc.)
+- `32` API operations covered
+- `96` NUnit component tests total (`3` per operation)
+- `75` CRUD tests in `Templates/`
+- `21` custom operation tests in `Custom/`
 
-CRUD templates (3 placeholders per operation) are scaffolded in:
+Folders:
 
-- `CalendarTasking.ComponentTests/Templates/UsersCrudTemplateTests.cs`
-- `CalendarTasking.ComponentTests/Templates/CalendarsCrudTemplateTests.cs`
-- `CalendarTasking.ComponentTests/Templates/EventsCrudTemplateTests.cs`
-- `CalendarTasking.ComponentTests/Templates/TasksCrudTemplateTests.cs`
-- `CalendarTasking.ComponentTests/Templates/PrivateClassSessionsCrudTemplateTests.cs`
+- `CalendarTasking.ComponentTests/Templates` (`Users`, `Calendars`, `Events`, `Tasks`, `PrivateClassSessions` CRUD)
+- `CalendarTasking.ComponentTests/Custom` (`login`, `password`, `task status`, `unpaid`, `monthly summary`, `mark-paid`, `mark-unpaid`)
 
-Current count:
+Run only component tests:
 
-- `25` CRUD operations
-- `20` implemented tests (`1` per CRUD action per resource)
-- `55` placeholders still marked `[Ignore]`
+```powershell
+dotnet test .\component-tests\CalendarTasking.ComponentTests\CalendarTasking.ComponentTests.csproj
+```
 
-Each placeholder test is marked with `[Ignore]`.
-Workflow:
+Run only CRUD template tests:
 
-1. Pick one placeholder test.
-2. Implement arrange/act/assert.
-3. Remove `[Ignore]` from that test.
+```powershell
+dotnet test .\component-tests\CalendarTasking.ComponentTests\CalendarTasking.ComponentTests.csproj --filter "FullyQualifiedName~Templates"
+```
+
+Run only custom operation tests:
+
+```powershell
+dotnet test .\component-tests\CalendarTasking.ComponentTests\CalendarTasking.ComponentTests.csproj --filter "FullyQualifiedName~Custom"
+```
